@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader, Dataset
 import tqdm
 
 # Globals
-ROOT = Path('/home/carlos/Downloads/camels_cl_4532001/')
+ROOT = Path(r'C:\Users\Carlos\Downloads\camels_cl_4532001')
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") # This line checks if GPU is available
 
 def loadDf(dataset):
@@ -34,6 +34,9 @@ def load_forcing(basin: str) -> Tuple[pd.DataFrame, int]:
     PP=loadDf('precip_cr2met_day.csv').iloc[:,-1]
     Tmax=loadDf('tmax_cr2met_day.csv').iloc[:,-1]
     Tmin=loadDf('tmin_cr2met_day.csv').iloc[:,-1]
+    swe=loadDf('SWE_basin_79_23.csv')
+    sca=loadDf('SCA_basin_79_23.csv')
+    'swe(m)','sca','albedo'
     df=pd.concat([PET,PP,Tmax,Tmin],axis=1)
     df.columns=['pet(mm/d)','pp(mm/d)','tmax(C)','tmin(C)']
 
@@ -367,9 +370,9 @@ def main():
     # Data set up#
     ##############
 
-    # Training data
-    start_date = pd.to_datetime("1979-01-01", format="%Y-%m-%d")
-    end_date = pd.to_datetime("1995-09-30", format="%Y-%m-%d")
+    #%% Training data
+    start_date = pd.to_datetime("1979-01-02", format="%Y-%m-%d")
+    end_date = pd.to_datetime("2021-06-01", format="%Y-%m-%d")
     ds_train = CamelsTXT(basin, seq_length=sequence_length, period="train", dates=[start_date, end_date])
     tr_loader = DataLoader(ds_train, batch_size=256, shuffle=True)
 
@@ -398,7 +401,7 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_func = nn.MSELoss()
     
-    n_epochs = 17 # Number of training epochs
+    n_epochs = 57 # Number of training epochs
 
     for i in range(n_epochs):
         train_epoch(model, optimizer, tr_loader, loss_func, i+1)
@@ -418,7 +421,7 @@ def main():
     end_date = ds_test.dates[1] + pd.DateOffset(days=1)
     date_range = pd.date_range(start_date, end_date)
     fig, ax = plt.subplots(figsize=(12, 4))
-    ax.plot( obs, label="observation")
+    ax.plot(obs, label="observation")
     ax.plot(preds, label="prediction")
     ax.legend()
     ax.set_title(f"Basin {basin} - Test set NSE: {nse:.3f}")
