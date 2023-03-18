@@ -34,11 +34,13 @@ def load_forcing(basin: str) -> Tuple[pd.DataFrame, int]:
     PP=loadDf('precip_cr2met_day.csv').iloc[:,-1]
     Tmax=loadDf('tmax_cr2met_day.csv').iloc[:,-1]
     Tmin=loadDf('tmin_cr2met_day.csv').iloc[:,-1]
-    swe=loadDf('SWE_basin_79_23.csv')
-    sca=loadDf('SCA_basin_79_23.csv')
-    'swe(m)','sca','albedo'
-    df=pd.concat([PET,PP,Tmax,Tmin],axis=1)
-    df.columns=['pet(mm/d)','pp(mm/d)','tmax(C)','tmin(C)']
+    idx=Tmin.index
+    idx=idx[idx>='1979-01-02']
+    swe=loadDf('SWE_basin_79_23.csv').loc[idx]
+    sca=loadDf('SCA_basin_79_23.csv').loc[idx]
+    albedo=loadDf('SAlbedo_basin_79_23.csv').loc[idx]
+    df=pd.concat([PET,PP,Tmax,Tmin,swe,sca,albedo],axis=1)
+    df.columns=['pet(mm/d)','pp(mm/d)','tmax(C)','tmin(C)','swe','sca','alb']
 
     # load area from header in m2
     dfArea=pd.read_csv(os.path.join(ROOT,'catchment_attributes.csv'),index_col=0)
@@ -137,7 +139,8 @@ class CamelsTXT(Dataset):
     def _load_data(self):
         """Load input and output data from text files."""
         df, area = load_forcing(self.basin)
-        df['QObs(mm/d)'] = load_discharge(self.basin, area)
+        dfQ=load_discharge(self.basin, area)
+        df['QObs(mm/d)'] = dfQ.loc[df.index].values
         print(type(df.index[0]))
         
         if self.dates is not None:
@@ -158,7 +161,10 @@ class CamelsTXT(Dataset):
         x = np.array([df['pet(mm/d)'].values,
                       df['pp(mm/d)'].values,
                       df['tmax(C)'].values,
-                      df['tmin(C)'].values]).T
+                      df['tmin(C)'].values,
+                      df['swe'].values,
+                      df['sca'].values,
+                      df['alb'].values]).T
         y = np.array([df['QObs(mm/d)'].values]).T
 
         # normalize data, reshape for LSTM training and remove invalid samples
@@ -198,11 +204,17 @@ class CamelsTXT(Dataset):
             means = np.array([self.means['pet(mm/d)'],
                               self.means['pp(mm/d)'],
                               self.means['tmax(C)'],
-                              self.means['tmin(C)']])
+                              self.means['tmin(C)'],
+                              self.means['swe'],
+                              self.means['sca'],
+                              self.means['alb']])
             stds = np.array([self.stds['pet(mm/d)'],
                              self.stds['pp(mm/d)'],
                              self.stds['tmax(C)'],
-                             self.stds['tmin(C)']])
+                             self.stds['tmin(C)'],
+                             self.stds['swe'],
+                             self.stds['sca'],
+                             self.stds['alb']])
             feature = (feature - means) / stds
         elif variable == 'output':
             feature = ((feature - self.means["QObs(mm/d)"]) /
@@ -225,11 +237,17 @@ class CamelsTXT(Dataset):
             means = np.array([self.means['pet(mm/d)'],
                               self.means['pp(mm/d)'],
                               self.means['tmax(C)'],
-                              self.means['tmin(C)']])
+                              self.means['tmin(C)'],
+                              self.means['swe'],
+                              self.means['sca'],
+                              self.means['alb']])
             stds = np.array([self.stds['pet(mm/d)'],
                              self.stds['pp(mm/d)'],
                              self.stds['tmax(C)'],
-                             self.stds['tmin(C)']])
+                             self.stds['tmin(C)'],
+                             self.stds['swe'],
+                             self.stds['sca'],
+                             self.stds['alb']])
             feature = feature * stds + means
         elif variable == 'output':
             feature = (feature * self.stds["QObs(mm/d)"] +
@@ -260,7 +278,7 @@ class Model(nn.Module):
         self.dropout_rate = dropout_rate
         
         # create required layer
-        self.lstm = nn.LSTM(input_size=4, hidden_size=self.hidden_size, 
+        self.lstm = nn.LSTM(input_size=7, hidden_size=self.hidden_size, 
                             num_layers=1, bias=True, batch_first=True)
         self.dropout = nn.Dropout(p=self.dropout_rate)
         self.fc = nn.Linear(in_features=self.hidden_size, out_features=1)
@@ -360,6 +378,7 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
     return nse_val
 
 def main():
+    #%%
     basin = '4532001' # can be changed to any 8-digit basin id contained in the CAMELS data set
     hidden_size = 10 # Number of LSTM cells
     dropout_rate = 0.0 # Dropout rate of the final fully connected Layer [0.0, 1.0]
@@ -370,7 +389,7 @@ def main():
     # Data set up#
     ##############
 
-    #%% Training data
+    # Training data
     start_date = pd.to_datetime("1979-01-02", format="%Y-%m-%d")
     end_date = pd.to_datetime("2021-06-01", format="%Y-%m-%d")
     ds_train = CamelsTXT(basin, seq_length=sequence_length, period="train", dates=[start_date, end_date])
@@ -411,7 +430,7 @@ def main():
         tqdm.tqdm.write(f"Validation NSE: {nse:.2f}")
         
     # Evaluate on test set
-    obs, preds = eval_model(model, test_loader)
+    obs, preds = eval_model(model, val_loader)
     preds = ds_val.local_rescale(preds.numpy(), variable='output')
     obs = obs.numpy()
     nse = calc_nse(obs, preds)
