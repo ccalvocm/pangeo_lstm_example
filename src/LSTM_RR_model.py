@@ -447,5 +447,10 @@ def main():
     ax.xaxis.set_tick_params(rotation=90)
     ax.set_xlabel("Fecha")
     _ = ax.set_ylabel("Caucal específico (mm/d)")
-    
-    
+    torch.save(model.state_dict(), os.path.join('..','modelos',
+                                                'Combarbala.pth'))
+
+def loadModel():
+    modelo = Model(hidden_size=hidden_size, dropout_rate=dropout_rate).to(DEVICE)        
+    modelo.load_state_dict(torch.load(os.path.join('.','model.pth')))
+    return modelo
