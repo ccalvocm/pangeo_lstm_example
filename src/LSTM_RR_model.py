@@ -39,8 +39,10 @@ def load_forcing(basin: str) -> Tuple[pd.DataFrame, int]:
     swe=loadDf('SWE_basin_79_23.csv').loc[idx]
     sca=loadDf('SCA_basin_79_23.csv').loc[idx]
     albedo=loadDf('SAlbedo_basin_79_23.csv').loc[idx]
-    df=pd.concat([PET,PP,Tmax,Tmin,swe,sca,albedo],axis=1)
-    df.columns=['pet(mm/d)','pp(mm/d)','tmax(C)','tmin(C)','swe','sca','alb']
+    pres=loadDf('SfPress_basin_79_23.csv').loc[idx]
+    df=pd.concat([PET,PP,Tmax,Tmin,swe,sca,albedo,pres],axis=1)
+    df.columns=['pet(mm/d)','pp(mm/d)','tmax(C)','tmin(C)','swe','sca',
+                'alb','press']
 
     # load area from header in m2
     dfArea=pd.read_csv(os.path.join(ROOT,'catchment_attributes.csv'),index_col=0)
@@ -164,7 +166,8 @@ class CamelsTXT(Dataset):
                       df['tmin(C)'].values,
                       df['swe'].values,
                       df['sca'].values,
-                      df['alb'].values]).T
+                      df['alb'].values,
+                      df['press'].values]).T
         y = np.array([df['QObs(mm/d)'].values]).T
 
         # normalize data, reshape for LSTM training and remove invalid samples
@@ -207,14 +210,16 @@ class CamelsTXT(Dataset):
                               self.means['tmin(C)'],
                               self.means['swe'],
                               self.means['sca'],
-                              self.means['alb']])
+                              self.means['alb'],
+                              self.means['press']])
             stds = np.array([self.stds['pet(mm/d)'],
                              self.stds['pp(mm/d)'],
                              self.stds['tmax(C)'],
                              self.stds['tmin(C)'],
                              self.stds['swe'],
                              self.stds['sca'],
-                             self.stds['alb']])
+                             self.stds['alb'],
+                             self.stds['press']])
             feature = (feature - means) / stds
         elif variable == 'output':
             feature = ((feature - self.means["QObs(mm/d)"]) /
@@ -240,14 +245,16 @@ class CamelsTXT(Dataset):
                               self.means['tmin(C)'],
                               self.means['swe'],
                               self.means['sca'],
-                              self.means['alb']])
+                              self.means['alb'],
+                              self.means('press')])
             stds = np.array([self.stds['pet(mm/d)'],
                              self.stds['pp(mm/d)'],
                              self.stds['tmax(C)'],
                              self.stds['tmin(C)'],
                              self.stds['swe'],
                              self.stds['sca'],
-                             self.stds['alb']])
+                             self.stds['alb'].
+                             self.stds['press']])
             feature = feature * stds + means
         elif variable == 'output':
             feature = (feature * self.stds["QObs(mm/d)"] +
@@ -278,7 +285,7 @@ class Model(nn.Module):
         self.dropout_rate = dropout_rate
         
         # create required layer
-        self.lstm = nn.LSTM(input_size=7, hidden_size=self.hidden_size, 
+        self.lstm = nn.LSTM(input_size=8, hidden_size=self.hidden_size, 
                             num_layers=1, bias=True, batch_first=True)
         self.dropout = nn.Dropout(p=self.dropout_rate)
         self.fc = nn.Linear(in_features=self.hidden_size, out_features=1)
@@ -447,6 +454,7 @@ def main():
     ax.xaxis.set_tick_params(rotation=90)
     ax.set_xlabel("Fecha")
     _ = ax.set_ylabel("Caucal específico (mm/d)")
+    #%%
     torch.save(model.state_dict(), os.path.join('..','modelos',
                                                 'Combarbala.pth'))
 
