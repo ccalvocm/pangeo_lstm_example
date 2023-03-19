@@ -425,13 +425,13 @@ def main():
     for i in range(n_epochs):
         train_epoch(model, optimizer, tr_loader, loss_func, i+1)
         obs, preds = eval_model(model, val_loader)
-        preds = ds_val.local_rescale(preds.numpy(), variable='output')
+        preds = ds_val.local_rescale(preds.cpu().numpy(), variable='output')
         nse = calc_nse(obs.numpy(), preds)
         tqdm.tqdm.write(f"Validation NSE: {nse:.2f}")
         
     # Evaluate on test set
     obs, preds = eval_model(model, test_loader)
-    preds = ds_val.local_rescale(preds.numpy(), variable='output')
+    preds = ds_val.local_rescale(preds.cpu().numpy(), variable='output')
     obs = obs.numpy()
     nse = calc_nse(obs, preds)
 
