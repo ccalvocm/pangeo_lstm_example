@@ -391,22 +391,22 @@ def main():
 
     # Training data
     start_date = pd.to_datetime("1979-01-02", format="%Y-%m-%d")
-    end_date = pd.to_datetime("2021-06-01", format="%Y-%m-%d")
+    end_date = pd.to_datetime("2020-04-30", format="%Y-%m-%d")
     ds_train = CamelsTXT(basin, seq_length=sequence_length, period="train", dates=[start_date, end_date])
     tr_loader = DataLoader(ds_train, batch_size=256, shuffle=True)
 
     # Validation data. We use the feature means/stds of the training period for normalization
     means = ds_train.get_means()
     stds = ds_train.get_stds()
-    start_date = pd.to_datetime("1995-10-01", format="%Y-%m-%d")
-    end_date = pd.to_datetime("2000-09-30", format="%Y-%m-%d")
+    start_date = pd.to_datetime("2000-10-01", format="%Y-%m-%d")
+    end_date = pd.to_datetime("2020-04-30", format="%Y-%m-%d")
     ds_val = CamelsTXT(basin, seq_length=sequence_length, period="eval", dates=[start_date, end_date],
                         means=means, stds=stds)
     val_loader = DataLoader(ds_val, batch_size=2048, shuffle=False)
 
     # Test data. We use the feature means/stds of the training period for normalization
     start_date = pd.to_datetime("2000-10-01", format="%Y-%m-%d")
-    end_date = pd.to_datetime("2021-06-01", format="%Y-%m-%d")
+    end_date = pd.to_datetime("2020-04-30", format="%Y-%m-%d")
     ds_test = CamelsTXT(basin, seq_length=sequence_length, period="eval", dates=[start_date, end_date],
                         means=means, stds=stds)
     test_loader = DataLoader(ds_test, batch_size=2048, shuffle=False)
@@ -420,7 +420,7 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_func = nn.MSELoss()
     
-    n_epochs = 57 # Number of training epochs
+    n_epochs = 67 # Number of training epochs
 
     for i in range(n_epochs):
         train_epoch(model, optimizer, tr_loader, loss_func, i+1)
@@ -430,7 +430,7 @@ def main():
         tqdm.tqdm.write(f"Validation NSE: {nse:.2f}")
         
     # Evaluate on test set
-    obs, preds = eval_model(model, val_loader)
+    obs, preds = eval_model(model, test_loader)
     preds = ds_val.local_rescale(preds.numpy(), variable='output')
     obs = obs.numpy()
     nse = calc_nse(obs, preds)
@@ -440,12 +440,12 @@ def main():
     end_date = ds_test.dates[1] + pd.DateOffset(days=1)
     date_range = pd.date_range(start_date, end_date)
     fig, ax = plt.subplots(figsize=(12, 4))
-    ax.plot(obs, label="observation")
-    ax.plot(preds, label="prediction")
+    ax.plot(date_range,obs, label="observado")
+    ax.plot(date_range,preds, label="modelado")
     ax.legend()
     ax.set_title(f"Basin {basin} - Test set NSE: {nse:.3f}")
     ax.xaxis.set_tick_params(rotation=90)
-    ax.set_xlabel("Date")
-    _ = ax.set_ylabel("Discharge (mm/d)")
+    ax.set_xlabel("Fecha")
+    _ = ax.set_ylabel("Caucal específico (mm/d)")
     
     
