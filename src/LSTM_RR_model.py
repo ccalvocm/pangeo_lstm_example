@@ -16,6 +16,16 @@ import tqdm
 ROOT = Path(r'C:\Users\Carlos\Downloads\camels_cl_4532001')
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") # This line checks if GPU is available
 
+def saveModel(model):
+    torch.save(model.state_dict(), os.path.join('..','modelos',
+                                                'Combarbala.pth'))
+    return None
+
+def loadModel():
+    modelo = Model(hidden_size=hidden_size, dropout_rate=dropout_rate).to(DEVICE)        
+    modelo.load_state_dict(torch.load(os.path.join('.','model.pth')))
+    return modelo
+
 def loadDf(dataset):
     df=pd.read_csv(os.path.join(ROOT,dataset),index_col=0,parse_dates=True)
     return df
@@ -455,10 +465,4 @@ def main():
     ax.set_xlabel("Fecha")
     _ = ax.set_ylabel("Caucal específico (mm/d)")
     #%%
-    torch.save(model.state_dict(), os.path.join('..','modelos',
-                                                'Combarbala.pth'))
-
-def loadModel():
-    modelo = Model(hidden_size=hidden_size, dropout_rate=dropout_rate).to(DEVICE)        
-    modelo.load_state_dict(torch.load(os.path.join('.','model.pth')))
-    return modelo
+    saveModel(model)
