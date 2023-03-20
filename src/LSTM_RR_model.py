@@ -427,7 +427,7 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_func = nn.MSELoss()
     
-    n_epochs = 67 # Number of training epochs
+    n_epochs = 100 # Number of training epochs
 
     for i in range(n_epochs):
         train_epoch(model, optimizer, tr_loader, loss_func, i+1)
