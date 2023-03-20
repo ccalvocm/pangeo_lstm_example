@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader, Dataset
 import tqdm
 
 # Globals
-ROOT = Path(r'C:\Users\Carlos\Downloads\camels_cl_4532001')
+ROOT = Path(os.path.join('..','modelos','combarbala'))
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") # This line checks if GPU is available
 
 def saveModel(model):
@@ -40,11 +40,11 @@ def load_forcing(basin: str) -> Tuple[pd.DataFrame, int]:
     """
     
     # read-in data and convert date to datetime index
-    PET=loadDf('pet_hargreaves_day.csv').iloc[:,-1]
-    PP=loadDf('precip_cr2met_day.csv').iloc[:,-1]
-    Tmax=loadDf('tmax_cr2met_day.csv').iloc[:,-1]
-    Tmin=loadDf('tmin_cr2met_day.csv').iloc[:,-1]
-    idx=Tmin.index
+    PET=loadDf('PET_basin_79_23.csv').iloc[:,-1]
+    PP=loadDf('pp_basin_79_23.csv').iloc[:,-1]
+    Tmax=loadDf('tmaxERA5.csv').iloc[:,-1]
+    Tmin=loadDf('tminERA5.csv').iloc[:,-1]
+    idx=pd.date_range('1979-01-02','2020-04-30',freq='D')
     idx=idx[idx>='1979-01-02']
     swe=loadDf('SWE_basin_79_23.csv').loc[idx]
     sca=loadDf('SCA_basin_79_23.csv').loc[idx]
@@ -460,7 +460,7 @@ def main():
     ax.plot(date_range,obs, label="observado")
     ax.plot(date_range,preds, label="modelado")
     ax.legend()
-    ax.set_title(f"Basin {basin} - Test set NSE: {nse:.3f}")
+    ax.set_title(f"Cuenca {basin} - Test set NSE: {nse:.3f}")
     ax.xaxis.set_tick_params(rotation=90)
     ax.set_xlabel("Fecha")
     _ = ax.set_ylabel("Caucal específico (mm/d)")
