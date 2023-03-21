@@ -44,7 +44,7 @@ def load_forcing(basin: str) -> Tuple[pd.DataFrame, int]:
     PP=loadDf('pp_basin_79_23.csv').iloc[:,-1]
     Tmax=loadDf('tmaxERA5.csv').iloc[:,-1]
     Tmin=loadDf('tminERA5.csv').iloc[:,-1]
-    idx=pd.date_range('1979-01-02','2020-04-30',freq='D')
+    idx=pd.date_range('1979-01-02','2021-11-05',freq='D')
     idx=idx[idx>='1979-01-02']
     swe=loadDf('SWE_basin_79_23.csv').loc[idx]
     sca=loadDf('SCA_basin_79_23.csv').loc[idx]
@@ -397,7 +397,7 @@ def calc_nse(obs: np.array, sim: np.array) -> float:
 def main():
     #%%
     basin = '4532001' # can be changed to any 8-digit basin id contained in the CAMELS data set
-    hidden_size = 10 # Number of LSTM cells
+    hidden_size = 20 # Number of LSTM cells
     dropout_rate = 0.0 # Dropout rate of the final fully connected Layer [0.0, 1.0]
     learning_rate = 1e-3 # Learning rate used to update the weights
     sequence_length = 365 # Length of the meteorological record provided to the network
@@ -407,7 +407,7 @@ def main():
     ##############
 
     # Training data
-    start_date = pd.to_datetime("1979-01-02", format="%Y-%m-%d")
+    start_date = pd.to_datetime("1989-01-02", format="%Y-%m-%d")
     end_date = pd.to_datetime("2020-04-30", format="%Y-%m-%d")
     ds_train = CamelsTXT(basin, seq_length=sequence_length, period="train", dates=[start_date, end_date])
     tr_loader = DataLoader(ds_train, batch_size=256, shuffle=True)
@@ -423,7 +423,7 @@ def main():
 
     # Test data. We use the feature means/stds of the training period for normalization
     start_date = pd.to_datetime("2000-10-01", format="%Y-%m-%d")
-    end_date = pd.to_datetime("2020-04-30", format="%Y-%m-%d")
+    end_date = pd.to_datetime("2021-11-05", format="%Y-%m-%d")
     ds_test = CamelsTXT(basin, seq_length=sequence_length, period="eval", dates=[start_date, end_date],
                         means=means, stds=stds)
     test_loader = DataLoader(ds_test, batch_size=2048, shuffle=False)
