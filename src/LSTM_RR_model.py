@@ -430,7 +430,7 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_func = nn.MSELoss()
     
-    n_epochs = 50 # Number of training epochs
+    n_epochs = 100 # Number of training epochs
 
     for i in range(n_epochs):
         train_epoch(model, optimizer, tr_loader, loss_func, i+1)
@@ -460,3 +460,11 @@ def main():
     #%%
     saveModel(model)
 # %%
+def saveForecast(dates,pred,basin):
+    dfPred=pd.DataFrame(preds,index=date_range,columns=['q (mm/d)'])
+    dfPred.index.name='fecha'
+    gdf=gpd.read_file(os.path.join('..','modelos',basin,'basin4calhypso.shp'))
+    gdf['fecha']=dfPred.index
+    gdf['q (mm/d)']=pred
+    return dfPred,gdf
+    
