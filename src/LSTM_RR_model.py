@@ -464,7 +464,9 @@ def saveForecast(dates,pred,basin):
     dfPred=pd.DataFrame(preds,index=date_range,columns=['q (mm/d)'])
     dfPred.index.name='fecha'
     gdf=gpd.read_file(os.path.join('..','modelos',basin,'basin4calhypso.shp'))
-    gdf['fecha']=dfPred.index
-    gdf['q (mm/d)']=pred
-    return dfPred,gdf
+    gdf['fecha']=''
+    gdf.at[0, 'fecha'] = ','.join([str(x) for x in list(dfPred.index)])
+    gdf['q (mm/d)']=''
+    gdf.at[0, 'q (mm/d)'] = ','.join([str(x[0]) for x in list(dfPred.values)])
+    return gdf
     
