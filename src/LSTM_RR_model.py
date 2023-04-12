@@ -21,9 +21,10 @@ def saveModel(model):
                                                 'Combarbala.pth'))
     return None
 
-def loadModel():
+def loadModel(name):
     modelo = Model(hidden_size=hidden_size, dropout_rate=dropout_rate).to(DEVICE)        
-    modelo.load_state_dict(torch.load(os.path.join('.','model.pth')))
+    modelo.load_state_dict(torch.load(os.path.join('..','modelos',
+                                                   name,'model.pth')))
     return modelo
 
 def loadDf(dataset):
@@ -408,14 +409,14 @@ def main():
     # Validation data. We use the feature means/stds of the training period for normalization
     means = ds_train.get_means()
     stds = ds_train.get_stds()
-    start_date = pd.to_datetime("2000-10-01", format="%Y-%m-%d")
+    start_date = pd.to_datetime("1990-04-01", format="%Y-%m-%d")
     end_date = pd.to_datetime("2020-04-30", format="%Y-%m-%d")
     ds_val = CamelsTXT(basin, seq_length=sequence_length, period="eval", dates=[start_date, end_date],
                         means=means, stds=stds)
     val_loader = DataLoader(ds_val, batch_size=2048, shuffle=False)
 
     # Test data. We use the feature means/stds of the training period for normalization
-    start_date = pd.to_datetime("2000-10-01", format="%Y-%m-%d")
+    start_date = pd.to_datetime("1990-04-01", format="%Y-%m-%d")
     end_date = pd.to_datetime("2023-09-21", format="%Y-%m-%d")
     ds_test = CamelsTXT(basin, seq_length=sequence_length, period="eval", dates=[start_date, end_date],
                         means=means, stds=stds)
@@ -460,13 +461,18 @@ def main():
     #%%
     saveModel(model)
 # %%
-def saveForecast(dates,pred,basin):
+def saveForecast(date_range,preds,basin):
+    import geopandas as gpd
     dfPred=pd.DataFrame(preds,index=date_range,columns=['q (mm/d)'])
-    dfPred.index.name='fecha'
     gdf=gpd.read_file(os.path.join('..','modelos',basin,'basin4calhypso.shp'))
-    gdf['fecha']=''
-    gdf.at[0, 'fecha'] = ','.join([str(x) for x in list(dfPred.index)])
-    gdf['q (mm/d)']=''
-    gdf.at[0, 'q (mm/d)'] = ','.join([str(x[0]) for x in list(dfPred.values)])
-    return gdf
+    area=gdf.area[0]
+    dfPred.index.name='fecha'
+    col='q (m3/s)'
+    dfPred.columns=[col]
+    dfPred[col]=dfPred[col]*area/86400/1000
+    dfPred[col][dfPred[col]<0]=0
+    gdfOut=gpd.GeoDataFrame(dfPred)
+    gdfOut.loc[gdfOut.index[0],'geometry']=gdf['geometry'][0].buffer(0)
+    gdfOut.set_crs(epsg='32719',inplace=True)
+    return dfPred,gdfOut
     
